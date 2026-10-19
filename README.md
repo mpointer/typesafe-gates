@@ -30,6 +30,9 @@ could fail (a whole batch silently dropped), the model could soft-refuse (a
 polite decline parses as nothing), and there was no signal for *how* relevant
 an item was, so a threshold was prompt wording instead of a number.
 
+The long version of where these gates came from, with the audit numbers
+behind each threshold, is in [docs/seven-production-gates.md](docs/seven-production-gates.md).
+
 ## Install
 
 ```sh
