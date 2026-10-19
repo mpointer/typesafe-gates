@@ -1,0 +1,41 @@
+name: Release
+
+# Publishes to npm with provenance on v* tags through npm trusted publishing
+# (OIDC): no token secret in the repository. One-time setup on npmjs.com:
+# the package's Settings > Trusted publisher must name this repo and this
+# workflow file. The very first version of a package cannot be published
+# this way; publish 0.1.0 once from a machine with `npm publish --access
+# public`, then configure the trusted publisher.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: Tag must match package.json version
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION."
+            exit 1
+          fi
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Update npm (OIDC trusted publishing needs >= 11.5)
+        run: npm install -g npm@latest
+      - run: npm publish --provenance --access public
