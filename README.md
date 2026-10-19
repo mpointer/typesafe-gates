@@ -176,6 +176,21 @@ latency.
 - Store the expected level, not just the keep decision. Every threshold above
   was set from a stored score distribution, not from guesswork.
 
+## Releasing
+
+1. Bump `version` in `package.json` and add a `CHANGELOG.md` entry.
+2. Commit, then publish a GitHub release whose tag is `vX.Y.Z` (a bare
+   `X.Y.Z` also works) targeting `main`. The release workflow checks the tag
+   against the version, re-runs lint, typecheck, tests and the build, and
+   publishes to npm with provenance through trusted publishing (no token
+   stored anywhere). A release saved as a draft creates no tag and runs
+   nothing.
+
+The first version of a package cannot be published by trusted publishing,
+so 0.1.0 was published by hand with `npm publish --access public` and the
+trusted publisher (owner `mpointer`, repository `typesafe-gates`, workflow
+`release.yml`) was configured on npmjs.com afterwards.
+
 ## License
 
 MIT

@@ -1,6 +1,6 @@
 name: Release
 
-# Publishes to npm with provenance on v* tags through npm trusted publishing
+# Publishes to npm with provenance on release tags (v0.1.0 or 0.1.0) through npm trusted publishing
 # (OIDC): no token secret in the repository. One-time setup on npmjs.com:
 # the package's Settings > Trusted publisher must name this repo and this
 # workflow file. The very first version of a package cannot be published
@@ -8,7 +8,7 @@ name: Release
 # public`, then configure the trusted publisher.
 on:
   push:
-    tags: ["v*"]
+    tags: ["v[0-9]*", "[0-9]*"]
 
 jobs:
   publish:
