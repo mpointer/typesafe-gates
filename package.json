@@ -1,6 +1,6 @@
 {
   "name": "typesafe-gates",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Probabilistic decision gates for LLM pipelines on TypeSafe AI's System One (Jev): typed Score, Choice and yes/no judgments with explicit thresholds, a stated fail-open or fail-closed policy per gate, all-or-nothing batches, time budgets, and usage accounting. Ships six reference gates from production.",
   "license": "MIT",
   "author": "Mike Pointer <mpointer@gmail.com>",
