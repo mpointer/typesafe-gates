@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Breaking:** requires Node.js >= 22.12 (was >= 20). Node 20 is end of
+  life, and the test toolchain (vitest 5) no longer supports it.
+
 ## 0.1.0
 
 First release. Extracted from a production newsletter platform.
