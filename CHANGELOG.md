@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- No library changes. README: updated release instructions. CI: newer
+  `actions/checkout` and `actions/setup-node`.
+
 ## 0.2.0
 
 - **Breaking:** requires Node.js >= 22.12 (was >= 20). Node 20 is end of
