@@ -195,24 +195,15 @@ latency.
 1. Bump `version` in `package.json` and add a `CHANGELOG.md` entry.
 2. Commit, then publish a GitHub release whose tag is `vX.Y.Z` (a bare
    `X.Y.Z` also works) targeting `main`. The release workflow checks the tag
-   against the version and re-runs lint, typecheck, tests and the build. A
-   release saved as a draft creates no tag and runs nothing.
-3. Publish to npm by hand from a clean checkout of the tagged commit, in a
-   real terminal:
+   against the version, re-runs lint, typecheck, tests and the build, and
+   publishes to npm with provenance through trusted publishing (no token
+   stored anywhere). A release saved as a draft creates no tag and runs
+   nothing.
 
-   ```sh
-   npm publish --access public
-   ```
-
-   npm asks for an MFA step with a passkey; approve it in the browser while
-   the command waits. The registry can take a few minutes to show the new
-   version.
-
-The workflow's own publish step (trusted publishing, owner `mpointer`,
-repository `typesafe-gates`, workflow `release.yml`) fails with
-`403 OIDC permission denied`, because the package requires that passkey
-step and CI cannot complete it. Releases published by hand carry no
-provenance attestation.
+The first version of a package cannot be published by trusted publishing,
+so 0.1.0 was published by hand with `npm publish --access public` and the
+trusted publisher (owner `mpointer`, repository `typesafe-gates`, workflow
+`release.yml`) was configured on npmjs.com afterwards.
 
 ## License
 
