@@ -16,6 +16,8 @@ export interface UsageRecord extends UsageTotals {
   provider: "typesafe";
   /** True when the invocation ended unavailable; the tokens were still billed. */
   failed: boolean;
+  /** Wall-clock time of the invocation, from first request to result. */
+  durationMs: number;
   estimatedCostUsd: number;
   /** Whatever the caller attached: tenant id, run id, request id. */
   meta: Record<string, unknown>;

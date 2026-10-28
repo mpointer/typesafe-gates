@@ -74,17 +74,27 @@ export interface Inbox {
   purpose: string;
 }
 
-/** The body is truncated: the gist and any injected instructions sit near
- * the top or are short, and a 50 KB forwarded thread should not be billed
- * in full. */
+/** The screen judges at most this much of the subject and body, so a 50 KB
+ * forwarded thread is not billed in full. Mail longer than this is held (see
+ * `decideInboundAction`): the sender chooses where injected instructions
+ * go, and padding past the cut would otherwise hide them from the screen
+ * while the responder still reads them. */
+export const INBOUND_SUBJECT_MAX_CHARS = 300;
+export const INBOUND_BODY_MAX_CHARS = 6_000;
+
+/** True when the screen would not see the whole email. */
+export function exceedsScreen(email: Pick<InboundEmail, "subject" | "body">): boolean {
+  return email.subject.length > INBOUND_SUBJECT_MAX_CHARS || email.body.length > INBOUND_BODY_MAX_CHARS;
+}
+
 export function inboundState(email: InboundEmail, inbox: Inbox) {
   return {
     inbox: { name: inbox.name, purpose: inbox.purpose },
     email: {
       from: `${email.fromName} <${email.fromEmail}>`,
       senderHistory: email.knownSender ? "has emailed this inbox before" : "first contact",
-      subject: email.subject.slice(0, 300),
-      body: email.body.slice(0, 6_000),
+      subject: email.subject.slice(0, INBOUND_SUBJECT_MAX_CHARS),
+      body: email.body.slice(0, INBOUND_BODY_MAX_CHARS),
     },
   };
 }
@@ -92,6 +102,8 @@ export function inboundState(email: InboundEmail, inbox: Inbox) {
 export interface InboundAnswers {
   intent: Pick<ChoiceResponse<typeof INBOUND_INTENTS>, "choice" | "probabilities">;
   injection: Pick<NoulResponse, "noul">;
+  /** The screen saw only part of the email. */
+  truncated?: boolean;
 }
 
 export type InboundDecision =
@@ -105,9 +117,11 @@ export const INJECTION_HOLD_AT = 0.3;
 export const AUTO_REPLY_MIN = 0.7;
 export const SPAM_SILENT_AT = 0.8;
 
-/** Pure policy. `null` answers mean the screen was unavailable: hold. */
+/** Pure policy. `null` answers mean the screen was unavailable, and
+ * `truncated` means it saw only part of the email: hold either way. */
 export function decideInboundAction(answers: InboundAnswers | null): InboundDecision {
   if (!answers) return { action: "hold", reason: "screen_unavailable", alert: true };
+  if (answers.truncated) return { action: "hold", reason: "too_long_to_screen", alert: true };
   const pSales = probabilityOf(answers.intent, "ad_inquiry", "negotiation");
   const pSpam = probabilityOf(answers.intent, "spam_phishing");
   const pInjection = answers.injection.noul;
@@ -128,7 +142,11 @@ export const inboundScreenGate = defineGate({
   policy: "fail-closed",
   questions: INBOUND_QUESTIONS,
   state: (email: InboundEmail, inbox: Inbox) => inboundState(email, inbox),
-  interpret: (answers): InboundAnswers => ({ intent: answers.intent, injection: answers.injection }),
+  interpret: (answers, email): InboundAnswers => ({
+    intent: answers.intent,
+    injection: answers.injection,
+    truncated: exceedsScreen(email),
+  }),
 });
 
 /** The full fail-closed path: a result from `inboundScreenGate.runOne` to a

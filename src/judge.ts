@@ -28,12 +28,12 @@ export interface JudgeConfig {
    * reason `no_client`. Omit to build one from `TYPESAFE_API_KEY` lazily. */
   client?: SystemOneClient | null;
   /** Receives one record per invocation, including failed ones (tokens spent
-   * before a failure were still billed). Errors thrown here are swallowed:
-   * telemetry must never fail a gate. */
+   * before a failure were still billed). It is not awaited, and errors
+   * thrown here are swallowed: telemetry must never fail or delay a gate. */
   recordUsage?: UsageRecorder;
   /** Where "falling back" warnings go. `null` silences them. Default: console. */
   logger?: Pick<Console, "warn"> | null;
-  /** Requests in flight per invocation. Default 8. */
+  /** Requests in flight per invocation, a positive integer. Default 8. */
   concurrency?: number;
   rates?: Rates;
   /** Model override for every request. */
@@ -91,6 +91,11 @@ export function createJudge(config: JudgeConfig = {}): Judge {
     const client = await getClient();
     const usage: UsageTotals = { inputTokens: 0, outputTokens: 0, requests: 0 };
     const requestedModel = opts.model ?? config.model ?? "";
+    const concurrency = opts.concurrency ?? config.concurrency ?? DEFAULT_CONCURRENCY;
+    if (!Number.isInteger(concurrency) || concurrency < 1) {
+      throw new RangeError(`[typesafe-gates:${opts.task}] concurrency must be a positive integer, got ${concurrency}`);
+    }
+    const started = performance.now();
 
     async function record(model: string, failed: boolean): Promise<void> {
       if (!config.recordUsage) return;
@@ -101,6 +106,7 @@ export function createJudge(config: JudgeConfig = {}): Judge {
           model: model || requestedModel || "jev-latest",
           provider: "typesafe",
           failed,
+          durationMs: performance.now() - started,
           estimatedCostUsd: estimateCostUsd(usage, rates),
           meta: opts.meta ?? {},
           ...usage,
@@ -138,12 +144,13 @@ export function createJudge(config: JudgeConfig = {}): Judge {
         const i = next++;
         try {
           const request = requestedModel
-            ? { state: states[i] as EntryType, questions, model: requestedModel }
-            : { state: states[i] as EntryType, questions };
+            ? { state: states[i] as NonNullable<EntryType>, questions, model: requestedModel }
+            : { state: states[i] as NonNullable<EntryType>, questions };
           const res = await client!.systemOne(request, { signal: abort.signal });
           answers[i] = res.answers;
-          usage.inputTokens += res.usage.input_tokens;
-          usage.outputTokens += res.usage.output_tokens;
+          // SDK >= 0.7 reports null when the API omits a count.
+          usage.inputTokens += res.usage.input_tokens ?? 0;
+          usage.outputTokens += res.usage.output_tokens ?? 0;
           usage.requests += 1;
           model ||= res.model;
         } catch (err) {
@@ -156,7 +163,7 @@ export function createJudge(config: JudgeConfig = {}): Judge {
       }
     }
 
-    const width = Math.min(opts.concurrency ?? config.concurrency ?? DEFAULT_CONCURRENCY, states.length);
+    const width = Math.min(concurrency, states.length);
     try {
       await Promise.all(Array.from({ length: width }, () => worker()));
     } finally {
@@ -165,7 +172,8 @@ export function createJudge(config: JudgeConfig = {}): Judge {
     }
 
     const incomplete = failed || abort.signal.aborted || usage.requests < states.length;
-    await record(model, incomplete);
+    // Not awaited: a slow or hung recorder must never hold up the gate.
+    void record(model, incomplete);
 
     if (incomplete) {
       const reason: UnavailableReason = budgetHit
