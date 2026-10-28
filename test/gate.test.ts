@@ -4,16 +4,27 @@ import { defineGate, verdictOrNull, verdictsOr, verdictsOrNull } from "../src/ga
 import { createJudge } from "../src/judge.js";
 import { fakeClient, noulAnswer } from "./helpers.js";
 
-const gate = defineGate({
+const gateSpec = {
   name: "spam",
   task: "spam_screen",
   policy: "fail-closed",
   questions: { spam: noul("Is `text` spam for `inbox`?", { true: "spam", false: "not spam" }) },
   state: (text: string, inbox: string) => ({ text, inbox }),
-  interpret: (answers, text) => ({ text, pSpam: answers.spam.noul }),
-});
+  interpret: (answers: { spam: { noul: number } }, text: string) => ({ text, pSpam: answers.spam.noul }),
+};
+const gate = defineGate(gateSpec);
 
 describe("defineGate", () => {
+  it("rejects when state or interpret throws, rather than reporting unavailable", async () => {
+    const client = fakeClient({ answers: () => ({ spam: noulAnswer(0.5) }) });
+    const judge = createJudge({ client, logger: null });
+    const badState = defineGate({ ...gateSpec, state: () => { throw new Error("bad payload"); } });
+    await expect(badState.run(judge, ["x"], "inbox")).rejects.toThrow("bad payload");
+    expect(client.systemOne).not.toHaveBeenCalled();
+    const badInterpret = defineGate({ ...gateSpec, interpret: () => { throw new Error("bad answer"); } });
+    await expect(badInterpret.run(judge, ["x"], "inbox")).rejects.toThrow("bad answer");
+  });
+
   it("builds states from inputs and context, judges them, and interprets each answer", async () => {
     const client = fakeClient({ answers: [{ spam: noulAnswer(0.9) }, { spam: noulAnswer(0.1) }] });
     const judge = createJudge({ client, logger: null });
