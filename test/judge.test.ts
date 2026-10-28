@@ -154,6 +154,43 @@ describe("createJudge", () => {
     expect(client.calls.every((c) => c.model === "jev-2")).toBe(true);
   });
 
+  it("rejects a concurrency that is not a positive integer", async () => {
+    const client = fakeClient({ answers: () => ({ yes: noulAnswer(1) }) });
+    const judge = createJudge({ client, logger: null });
+    for (const concurrency of [0, -1, Number.NaN, 1.5]) {
+      await expect(judge(states(1), QUESTIONS, { task: "t", concurrency })).rejects.toThrow(RangeError);
+    }
+    expect(client.systemOne).not.toHaveBeenCalled();
+  });
+
+  it("does not wait for the usage recorder", async () => {
+    const client = fakeClient({ answers: () => ({ yes: noulAnswer(1) }) });
+    const judge = createJudge({ client, logger: null, recordUsage: () => new Promise<void>(() => {}) });
+    const res = await Promise.race([
+      judge(states(1), QUESTIONS, { task: "t" }),
+      new Promise((resolve) => setTimeout(() => resolve("hung"), 200)),
+    ]);
+    expect(res).toMatchObject({ status: "judged" });
+  });
+
+  it("records the invocation's duration", async () => {
+    const client = fakeClient({ answers: () => ({ yes: noulAnswer(1) }), delayMs: 20 });
+    const records: UsageRecord[] = [];
+    await createJudge({ client, logger: null, recordUsage: (r) => void records.push(r) })(states(1), QUESTIONS, { task: "t" });
+    expect(records[0]!.durationMs).toBeGreaterThanOrEqual(15);
+  });
+
+  it("counts null token counts as zero", async () => {
+    const client = fakeClient({ answers: () => ({ yes: noulAnswer(1) }) });
+    const original = client.systemOne.getMockImplementation()!;
+    client.systemOne.mockImplementation(async (...args: unknown[]) => {
+      const res = (await (original as (...a: unknown[]) => Promise<{ usage: object }>)(...args));
+      return { ...res, usage: { input_tokens: null, output_tokens: null } };
+    });
+    const res = await createJudge({ client, logger: null })(states(2), QUESTIONS, { task: "t" });
+    expect(res.usage).toEqual({ inputTokens: 0, outputTokens: 0, requests: 2 });
+  });
+
   it("works with Score questions and keeps the probability table", async () => {
     const q = { level: score("How much?", ["none", "some", "lots"]) };
     const client = fakeClient({ answers: [{ level: scoreAnswer({ 0: 0.1, 1: 0.2, 2: 0.7 }) }] });

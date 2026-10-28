@@ -96,10 +96,10 @@ order.
 - **Time budget.** `budgetMs` aborts everything in flight and returns
   `over_budget`. Use it on request-path gates (a webhook with a 20 s limit).
 - **Usage accounting.** `recordUsage` receives one record per invocation with
-  tokens, request count, estimated cost, task name, model, and `failed`. It is
-  called even when the invocation failed, because tokens spent before a
-  failure were billed. A throwing recorder is logged and swallowed: telemetry
-  never fails a gate.
+  tokens, request count, estimated cost, duration, task name, model, and
+  `failed`. It is called even when the invocation failed, because tokens
+  spent before a failure were billed. It is not awaited, and a throwing
+  recorder is logged and swallowed: telemetry never fails or delays a gate.
 - **No client, no judgment.** With `TYPESAFE_API_KEY` unset the judge returns
   `no_client`. It never decides what that means for a gate.
 
@@ -128,7 +128,7 @@ context argument.
 | `candidateGate(categories, fallback)` | relevance + newsworthiness (Score) + category (Choice) in one request; `rankCandidates` picks the top N | fail-open | as above; filler dropped at P ≥ 0.5 |
 | `localityGate` | Score, 4 levels: not local / statewide / nearby / hyperlocal; `pickLocalFirst` builds a local-first pool | fail-open | `LOCALITY_MIN_PROBABILITY` (0.5), `LOCALITY_POOL_TARGET` (12, 8 to 30), `SOURCE_LOCALITY_MIN_LEVEL` (0.5) |
 | `menuPageGate` | yes/no: is this page a restaurant's menu | fail-open | `MENU_MIN_PROBABILITY` (0.4) |
-| `inboundScreenGate` | intent (Choice, 7 labels) + AI-directed-instruction injection (yes/no); `decideInboundAction` is the policy table | **fail-closed** | fixed: hold at P(injection) ≥ 0.3, auto-reply at P(sales) ≥ 0.7, silent spam at ≥ 0.8 |
+| `inboundScreenGate` | intent (Choice, 7 labels) + AI-directed-instruction injection (yes/no); `decideInboundAction` is the policy table | **fail-closed** | fixed: hold at P(injection) ≥ 0.3, auto-reply at P(sales) ≥ 0.7, silent spam at ≥ 0.8; mail longer than the screen sees (subject 300, body 6,000 chars) is held |
 | `factCheckGate` | unsupported + contradicts + personal (three yes/no) per section against the evidence the writer was given | fail-open | `FACT_CHECK_MIN_PROBABILITY` (0.7); contradicts at 0.5; personal note at 0.8 |
 
 Provenance, briefly:
