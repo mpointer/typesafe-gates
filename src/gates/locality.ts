@@ -103,12 +103,17 @@ export interface LocalFirstPick<T> {
 
 /** The local-first pool: every item at P(nearby or closer) >= threshold,
  * topped up to `target` with the next-most-local items that are at least
- * statewide-ish. A slow news day yields a smaller pool, not an off-topic one. */
+ * statewide-ish. A slow news day yields a smaller pool, not an off-topic one.
+ * `verdicts[i]` must be the verdict for `items[i]`; when the gate was
+ * unavailable, skip this and keep the previous path instead. */
 export function pickLocalFirst<T>(
   items: readonly T[],
   verdicts: readonly LocalityVerdict[],
   opts: { target?: number; minProbability?: number } = {},
 ): LocalFirstPick<T> {
+  if (verdicts.length !== items.length) {
+    throw new RangeError(`pickLocalFirst: ${items.length} items but ${verdicts.length} verdicts`);
+  }
   const target = opts.target ?? localPoolTarget();
   const threshold = opts.minProbability ?? localityMinProbability();
   const local = new Set<number>();

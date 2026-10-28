@@ -54,7 +54,9 @@ export interface Gate<Input, Context, Q extends Questions, Verdict> {
   readonly questions: Q;
   state(input: Input, context: Context): EntryType;
   interpret(answers: SystemOneResult<Q>["answers"], input: Input, context: Context): Verdict;
-  /** Judge every input in one all-or-nothing invocation. */
+  /** Judge every input in one all-or-nothing invocation. The policy covers
+   * the judge being unavailable; an error thrown by `state` or `interpret`
+   * rejects instead, so fail-closed callers should catch it and hold. */
   run(judge: Judge, inputs: readonly Input[], context: Context, opts?: GateRunOptions): Promise<GateResult<Verdict>>;
   /** Judge a single input. */
   runOne(judge: Judge, input: Input, context: Context, opts?: GateRunOptions): Promise<GateResult<Verdict>>;

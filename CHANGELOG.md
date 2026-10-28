@@ -11,6 +11,8 @@
 - **Breaking:** `concurrency` must be a positive integer; `0`, negative or
   `NaN` now throws a `RangeError` instead of returning `request_failed`
   with no error.
+- **Breaking:** `pickLocalFirst` throws a `RangeError` when `verdicts` and
+  `items` differ in length, instead of silently dropping the unmatched items.
 - `recordUsage` is no longer awaited, so a slow or hung recorder cannot
   hold a gate past its `budgetMs`.
 - `UsageRecord.durationMs`: wall-clock time of the invocation.

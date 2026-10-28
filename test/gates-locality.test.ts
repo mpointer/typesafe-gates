@@ -55,6 +55,11 @@ describe("pickLocalFirst", () => {
     const verdicts = [v(3, 1), v(3, 1), v(1.5, 0.1)];
     expect(pickLocalFirst(items, verdicts, { target: 2, minProbability: 0.5 }).items).toEqual(["a", "b"]);
   });
+
+  it("throws when verdicts do not line up with items instead of silently dropping them", () => {
+    expect(() => pickLocalFirst(["a", "b", "c"], [], { target: 12, minProbability: 0.5 })).toThrow(RangeError);
+    expect(() => pickLocalFirst(["a"], [v(3, 1), v(3, 1)], { target: 12, minProbability: 0.5 })).toThrow(RangeError);
+  });
 });
 
 describe("meanLocality", () => {

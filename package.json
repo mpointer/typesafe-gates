@@ -39,7 +39,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
     "lint": "eslint .",
-    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build",
+    "coverage": "vitest run --coverage"
   },
   "keywords": [
     "typesafe-ai",
@@ -60,6 +61,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@typesafe-ai/sdk": "0.6.0",
+    "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^10.13.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.1",

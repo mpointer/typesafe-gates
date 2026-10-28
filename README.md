@@ -81,6 +81,17 @@ A gate declares four things:
 the common shapes: `verdictsOrNull` (fail-open), `verdictOrNull` (one item),
 `verdictsOr(result, reason => fallback)` (fail-closed).
 
+The policy covers the judge being unavailable, not bugs in your gate. If
+`state` or `interpret` throws (for example on a malformed webhook payload),
+`run` rejects with that error. A fail-closed caller should catch it and take
+the same conservative path:
+
+```ts
+const decision = await inboundScreenGate
+  .runOne(judge, email, inbox)
+  .then(inboundDecision, () => ({ action: "hold", reason: "screen_error", alert: true }) as const);
+```
+
 ## The judge
 
 `createJudge(config)` returns a function that asks the same questions of every
